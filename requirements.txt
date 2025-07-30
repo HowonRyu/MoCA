@@ -1,3 +1,6 @@
 torch==1.13.1
 torchvision==0.8.1
 timm==0.3.2
+protobuf==3.12.2
+submitit==1.5.1
+psutil==7.0.0
