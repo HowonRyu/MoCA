@@ -9,7 +9,7 @@
 
 
 ## Demonstration
-For reconstruction and classification demonstration on the UCI-HAR dataset, go to [UCIHAR_mae_visualize.ipynb](https://github.com/HowonRyu/MAE_Accelerometer/blob/main/UCIHAR_mae_visualize.ipynb).
+For reconstruction and classification demonstration on the UCI-HAR dataset, go to [UCIHAR_mae_visualize.ipynb](https://github.com/HowonRyu/MoCA/blob/main/UCIHAR_mae_visualize.ipynb).
 
 
   
@@ -23,10 +23,10 @@ You can set up the environment by installing the required dependencies:
 ```
 pip install -r requirements.txt
 ```
-The list of dependencies can be found in the [requirements.txt](https://github.com/HowonRyu/MAE_Accelerometer/blob/main/requirements.txt) file.
+The list of dependencies can be found in the [requirements.txt](https://github.com/HowonRyu/MoCA/blob/main/requirements.txt) file.
 
 ## Data and Checkpoints
-- MoCA defaults to using the pre-processed UCI-HAR[[1]](#1) dataset located in [MAE_Accelerometer/data/{data_length}](https://github.com/HowonRyu/MAE_Accelerometer/tree/main/data). Default input length is 200 in MoCA.
+- MoCA defaults to using the pre-processed UCI-HAR[[1]](#1) dataset located in [MAE_Accelerometer/data/{data_length}](https://github.com/HowonRyu/MoCA/tree/main/data). Default input length is 200 in MoCA.
 - The pre-trained checkpoints can be found [here](https://drive.google.com/drive/folders/1cpO-E7pAH_YYzzE8QlQGr6zv7zyEXknH?usp=drive_link).
 
 
