@@ -22,8 +22,8 @@ to install LFS.
 
 To get started, clone the repository to your local or cluster machine by running the following commands in your terminal
 ```
-git clone https://github.com/HowonRyu/MAE_Accelerometer.git
-cd MAE_Accelerometer
+git clone https://github.com/HowonRyu/MoCA.git
+cd MoCA
 ```
 You can set up the environment by installing the required dependencies:
 ```
