@@ -14,7 +14,13 @@ For reconstruction and classification demonstration on the UCI-HAR dataset, go t
 
   
 ## Setting up Environment
-To get started, clone the repository to your local or cluster machine by running the following commands in your terminal:
+This repository uses [Git Large File Storage (LFS)](https://git-lfs.github.com/) for checkpoints. Before cloning the repository, run 
+```
+git lfs install
+```
+to install LFS.
+
+To get started, clone the repository to your local or cluster machine by running the following commands in your terminal
 ```
 git clone https://github.com/HowonRyu/MAE_Accelerometer.git
 cd MAE_Accelerometer
