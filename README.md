@@ -26,8 +26,8 @@ pip install -r requirements.txt
 The list of dependencies can be found in the [requirements.txt](https://github.com/HowonRyu/MoCA/blob/main/requirements.txt) file.
 
 ## Data and Checkpoints
-- MoCA defaults to using the pre-processed UCI-HAR[[1]](#1) dataset located in [MAE_Accelerometer/data/{data_length}](https://github.com/HowonRyu/MoCA/tree/main/data). Default input length is 200 in MoCA.
-- The pre-trained checkpoints can be found [here](https://drive.google.com/drive/folders/1cpO-E7pAH_YYzzE8QlQGr6zv7zyEXknH?usp=drive_link).
+- MoCA defaults to using the pre-processed UCI-HAR[[1]](#1) dataset located in [MoCA/data/{data_length}](https://github.com/HowonRyu/MoCA/tree/main/data). Default input length is 200 in MoCA.
+- The pre-trained checkpoints can be found in [MoCA/checkpoints](https://github.com/HowonRyu/MoCA/tree/main/checkpoints).
 
 
 ## Pre-training
