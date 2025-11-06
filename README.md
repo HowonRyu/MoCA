@@ -81,6 +81,21 @@ python {path_to_submitit_linprobe.py} \
 ```
 
 
+| **Configuration**      | **UCI-HAR**      | **WISDM**        | **IMWSHA**       | **RealWorld**    | **OPPORTUNITY**  | **PAMAP2**       |
+| ---------------------- | ---------------- | ---------------- | ---------------- | ---------------- | ---------------- | ---------------- |
+| **Optimizer**          | AdamW            | AdamW            | AdamW            | AdamW            | AdamW            | AdamW            |
+| **Learning Rate**      | 1e-3             | 1e-3 (1e-2)      | 2.5e-4 (1e-3)    | 2.5e-4 (2.5e-3)  | 2.5e-4 (2.5e-3)  | 2.5e-4 (2.5e-3)  |
+| **Weight Decay**       | 5e-2 (0)         | 5e-2 (1e-4)      | 5e-2 (1e-4)      | 5e-2 (1e-4)      | 1e-1 (5e-2)      | 5e-2 (1e-4)      |
+| **Optimizer Momentum** | β₁=0.9, β₂=0.999 | β₁=0.9, β₂=0.999 | β₁=0.9, β₂=0.999 | β₁=0.9, β₂=0.999 | β₁=0.9, β₂=0.999 | β₁=0.9, β₂=0.999 |
+| **Batch Size**         | 50               | 256              | 64 (28)          | 64               | 64               | 64               |
+| **LR Schedule**        | Cosine Decay     | Cosine Decay     | Cosine Decay     | Cosine Decay     | Cosine Decay     | Cosine Decay     |
+| **Warm-up Epochs**     | 5 (10)           | 10               | 10               | 10               | 10               | 10               |
+| **Training Epochs**    | 50               | 50               | 50               | 50               | 50               | 50               |
+
+
+
+
+
 
 ## Reference
 <a id="1">[1]</a> Reyes-Ortiz, J., Anguita, D., Ghio, A., Oneto, L., & Parra, X. (2013). Human Activity Recognition Using Smartphones [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C54S4K.
