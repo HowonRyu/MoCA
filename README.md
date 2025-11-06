@@ -92,7 +92,7 @@ python {path_to_submitit_linprobe.py} \
 | **Warm-up Epochs**     | 5 (10)           | 10               | 10               | 10               | 10               | 10               |
 | **Training Epochs**    | 50               | 50               | 50               | 50               | 50               | 50               |
 
-
+* Finetuning configuration (linear probing configuration)
 
 
 
