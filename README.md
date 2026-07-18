@@ -2,6 +2,7 @@
 - [Demonstration](#Demonstration)
 - [Setting up Environment](#Setting-up-Environment)
 - [Data and Checkpoints](#Data-and-Checkpoints)
+- [Data Augmentation](#Data-Augmentation)
 - [Pre-training](#Pre-training)
 - [Downstream Classification Tasks](#Downstream-Classification-Tasks)
 
@@ -35,6 +36,25 @@ The list of dependencies can be found in the [requirements.txt](https://github.c
 - MoCA defaults to using the pre-processed UCI-HAR[[1]](#1) dataset located in [MoCA/data/{data_length}](https://github.com/HowonRyu/MoCA/tree/main/data). Default input length is 200 in MoCA.
 - The pre-trained checkpoints can be found in [MoCA/checkpoints](https://github.com/HowonRyu/MoCA/tree/main/checkpoints).
 
+
+## Data Augmentation
+To further enhance MoCA's cross-modality learning capabilities, we augment our dataset by incorporating more time series samples containing state transitions. Specifically, we use a straightforward augmentation strategy that can be applied both offline and on-the-fly. In this approach, two time series samples are randomly selected, and a mixup operation is performed. A segment of variable length (between 20% and 50% of the original time series length) is extracted from one sample and inserted into the corresponding position of the other. This process is repeated to generate the desired number of augmented samples and saved to disk for reproducibility.
+
+**Algorithm — Augment Time Series**
+
+```
+Input:  Dataset X, target length L
+Output: Augmented time series x̃
+
+1. Sample x₁, x₂ ~ X
+2. Sample chunk length λ ~ U(1, L) and start indices s₁, s₂ ~ U(0, L − λ)
+3. Replace x₁[s₁ : s₁ + λ] with x₂[s₂ : s₂ + λ]
+4. return x̃ = x₁[1 : L]
+```
+
+![Augmentation example](plot/augmentation_example.png)
+
+The figure illustrates one pass of the algorithm on the three accelerometer channels (acc-x/y/z). **Sample 1** is the target x₁ and **Sample 2** is the donor x₂; the orange band marks the segment x₂[s₂ : s₂+λ] that is cut out. In the **augmented sample**, that segment (green band) is spliced into x₁ at position s₁, replacing x₁[s₁ : s₁+λ] while the rest of x₁ is left untouched. The same span is applied to all channels at once, so the splice injects a synthetic state transition — the sharp change at the band edges — that the model learns to represent.
 
 ## Pre-training
 You can pre-train from scratch by using `submitit_pretrain.py`, which calls the `main_pretrain.py` script, using the following:
@@ -99,4 +119,5 @@ python {path_to_submitit_linprobe.py} \
 
 ## Reference
 <a id="1">[1]</a> Reyes-Ortiz, J., Anguita, D., Ghio, A., Oneto, L., & Parra, X. (2013). Human Activity Recognition Using Smartphones [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C54S4K.
+
 
