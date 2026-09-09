@@ -8,6 +8,9 @@
 
 ![Analysis Pipeline](plot/figure1.png)
 
+## Manuscript
+Our pre-print can be found in [arXiv](https://arxiv.org/abs/2506.02260).
+
 
 ## Demonstration
 For reconstruction and classification demonstration on the UCI-HAR dataset, go to [UCIHAR_mae_visualize.ipynb](https://github.com/HowonRyu/MoCA/blob/main/UCIHAR_mae_visualize.ipynb).
