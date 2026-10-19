@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MoCA</title>
+<meta name="description" content="MoCA: a self-supervised learning framework that combines transformer architecture with masked autoencoder methodology, using a principled cross-modality masking scheme for multi-modal wearable data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  /* Layout and type follow the OpenSLA project page; the brand hue is MoCA's own (swap --brand*, --grad*). */
+  :root {
+    --bg: #fdfefe; --bg-2: #f4f8f8; --surface: #ffffff; --surface-2: #eef5f5;
+    --line: #dde9ea; --line-soft: #ebf3f3;
+    --text: #172427; --text-soft: #3d5054; --muted: #6b7d80;
+    --brand: #0f7c86; --brand-d: #0b5f68; --brand-l: #7cc6cc; --base: #9aa3a5; --gray: #7c8486;
+    --grad: linear-gradient(100deg, #0b6b75, #3db0b8);
+    --grad-deep: linear-gradient(120deg, #0b5f68, #2a9aa3);
+    --radius: 10px; --radius-sm: 7px;
+    --shadow: 0 22px 50px -28px rgba(10, 70, 78, .32);
+    --shadow-sm: 0 2px 12px rgba(10, 70, 78, .07);
+    --serif: "Spectral", Georgia, serif;
+    --display: Georgia, "Times New Roman", serif;
+    --ui: "Space Grotesk", system-ui, sans-serif;
+    --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+  body { margin: 0; font: 17px/1.6 var(--serif); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  img, svg { max-width: 100%; display: block; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+  .wrap { width: min(1200px, 88vw); margin: 0 auto; }
+  h1, h2, h3 { font-family: var(--display); line-height: 1.12; margin: 0; text-wrap: balance; }
+  .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .a-teal { --acc: #0f7c86; --accbg: rgba(15,124,134,.12); }
+  .a-blue { --acc: #3f7fc4; --accbg: rgba(63,127,196,.13); }
+  .a-green { --acc: #46905f; --accbg: rgba(79,157,105,.15); }
+  .a-orange { --acc: #c9761c; --accbg: rgba(221,138,47,.15); }
+  .kicker { font-family: var(--ui); font-size: .86rem; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--brand-d); }
+
+  /* nav */
+  .nav { position: fixed; inset: 0 0 auto 0; z-index: 100; border-bottom: 1px solid transparent; transition: background .3s, border-color .3s; }
+  .nav.scrolled { background: rgba(255,255,255,.86); backdrop-filter: saturate(140%) blur(14px); -webkit-backdrop-filter: saturate(140%) blur(14px); border-bottom-color: var(--line); }
+  .nav-inner { width: min(1200px, 88vw); margin: 0 auto; height: 68px; display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: .6rem; font: 700 1.22rem var(--ui); color: var(--gray); }
+  .brand span span { color: var(--brand); }
+  .mark { width: 22px; height: 22px; border-radius: 7px; background: var(--grad); box-shadow: 0 4px 14px rgba(15,124,134,.4); }
+  .nav-links { list-style: none; display: flex; align-items: center; gap: 1.7rem; margin: 0; padding: 0; }
+  .nav-links a { color: var(--text-soft); font: 500 1.02rem var(--sans); }
+  .nav-links a:hover { color: var(--brand-d); }
+  .btn-mini { border: 1px solid var(--line); border-radius: 999px; padding: .5rem 1rem; background: var(--surface-2); }
+
+  /* hero */
+  .hero { position: relative; padding: 112px 0 72px; overflow: hidden; }
+  .hero-bg { position: absolute; inset: 0; pointer-events: none; }
+  .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .55; }
+  .orb-1 { width: 520px; height: 520px; background: radial-gradient(circle, rgba(15,124,134,.30), transparent 65%); top: -140px; left: -80px; }
+  .orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(63,127,196,.22), transparent 65%); top: 20px; right: -110px; }
+  .orb-3 { width: 420px; height: 420px; background: radial-gradient(circle, rgba(221,138,47,.14), transparent 65%); bottom: -180px; left: 40%; }
+  .grid-fade { position: absolute; inset: 0; background-image: linear-gradient(rgba(10,70,78,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(10,70,78,.05) 1px, transparent 1px);
+    background-size: 54px 54px; -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 25%, #000 30%, transparent 75%); mask-image: radial-gradient(ellipse 80% 60% at 50% 25%, #000 30%, transparent 75%); }
+  .hero-inner { position: relative; }
+
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .stage-plot { position: relative; padding: 1rem 1.2rem .6rem; }
+  .stage-top { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; margin-bottom: .4rem; }
+  .stage-sub { font: .82rem var(--sans); color: var(--muted); }
+  .lanes { position: relative; }
+  .lanes svg { width: 100%; height: 330px; transition: opacity .35s; }
+  .lanes svg.fade { opacity: .15; }
+  .ch { position: absolute; left: 0; transform: translateY(-50%); font: 700 .7rem var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--text-soft); background: rgba(255,255,255,.85); padding: 0 .3rem; border-radius: 4px; }
+  .lanes .patch { position: absolute; bottom: -1.3rem; font: .7rem var(--sans); color: var(--muted); }
+  .stage-pred { border-left: 1px solid var(--line); background: var(--bg-2); padding: 1rem 1.2rem; display: flex; flex-direction: column; }
+  .pred-label { font: 700 1.9rem/1.1 var(--ui); letter-spacing: -.02em; margin: .35rem 0 .2rem; }
+  .pred-truth { font: .88rem var(--sans); color: var(--muted); }
+  .pred-truth b { font-weight: 600; }
+  .pred-truth b.ok { color: var(--brand); }
+  .pred-truth b.no { color: #c0492b; }
+  .probs { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .45rem; font: .82rem var(--sans); }
+  .probs li { display: grid; grid-template-columns: 82px 1fr 44px; gap: .5rem; align-items: center; color: var(--text-soft); }
+  .probs .bar { height: 8px; border-radius: 4px; background: var(--line-soft); overflow: hidden; }
+  .probs .bar i { display: block; height: 100%; background: var(--base); border-radius: 4px; transition: width .5s cubic-bezier(.2,.7,.2,1); }
+  .probs li.top { color: var(--text); font-weight: 600; }
+  .probs li.top .bar i { background: var(--grad); }
+  .probs .pct { text-align: right; font-variant-numeric: tabular-nums; }
+  .stage-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin: 1.1rem 0 0; }
+  .stage-ctl .lbl { font: 600 .78rem var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-right: .3rem; }
+  .chip-btn { font: 600 .84rem var(--ui); border: 1px solid var(--line); background: var(--surface); color: var(--text-soft); border-radius: 999px; padding: .32rem .8rem; cursor: pointer; transition: border-color .2s, color .2s, background .2s; }
+  .chip-btn:hover { border-color: var(--brand); color: var(--brand-d); }
+  .chip-btn[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .chip-btn.ghost { margin-left: auto; }
+  .stage-note { font: .84rem var(--sans); color: var(--muted); margin: .7rem 0 0; }
+
+  .hero-head { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 3.5rem; align-items: center; margin-top: 3.2rem; }
+  .hero-title h1 { font: 800 clamp(3.6rem, 8vw, 6.8rem)/.95 "Manrope", var(--sans); letter-spacing: -.035em; margin: 0 0 1rem; }
+  .hero-title h1 .mo { color: var(--gray); }
+  .type-line { font: 600 clamp(1.3rem, 2.4vw, 1.9rem)/1.35 var(--ui); color: var(--gray); margin: 0; }
+  .type-line span { color: var(--brand); font-weight: 700; }
+  .type-sub { font: 500 1.05rem var(--ui); color: var(--muted); margin: .3rem 0 0; }
+  .byline { font: 1.12rem/1.55 var(--sans); margin: 1.2rem 0 0; }
+  .byline sup { font-size: .7em; }
+  .byline .affil { display: block; color: var(--muted); font-size: .98rem; margin-top: .25rem; }
+  .cta-row { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 2rem; }
+  .cta-row.center { justify-content: center; }
+  .btn { display: inline-flex; align-items: center; gap: .5rem; font: 600 1rem var(--ui); padding: .78rem 1.4rem; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); transition: transform .2s, border-color .2s, color .2s; }
+  .btn:hover { transform: translateY(-2px); border-color: var(--brand); color: var(--brand-d); }
+  .btn svg { width: 17px; height: 17px; }
+  .lead-line { display: grid; gap: .2rem; padding: .85rem .2rem .9rem; border-top: 1px solid var(--line); line-height: 1.45; color: var(--muted); font: .98rem/1.5 var(--sans); }
+  .lead-line:last-child { border-bottom: 1px solid var(--line); }
+  .ln-no { font: 700 1.18rem var(--ui); letter-spacing: -.01em; color: var(--brand-d); }
+  .lead-line b { color: var(--text); }
+
+  /* sections */
+  .section { padding: 104px 0; }
+  .section.alt { background: var(--bg-2); border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+  .section-head { max-width: 820px; margin: 0 auto 3rem; text-align: center; }
+  .section-head h2 { font-size: clamp(1.8rem, 3.6vw, 2.6rem); font-weight: 700; letter-spacing: -.02em; margin: .7rem 0 .8rem; }
+  .section-head p { color: var(--muted); font-size: 1.2rem; margin: .7rem 0 0; }
+  .accordion { max-width: 900px; margin: 0 auto; display: grid; gap: 1rem; }
+  .acc-item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); }
+  .acc-item[open] { border-color: var(--acc); box-shadow: var(--shadow); }
+  .acc-item summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 1.1rem; padding: 1.15rem 1.4rem; }
+  .acc-item summary::-webkit-details-marker { display: none; }
+  .acc-num { flex: none; width: 40px; height: 40px; border-radius: 7px; display: grid; place-items: center; font: 700 .95rem var(--ui); color: #fff; background: var(--acc); }
+  .acc-title { flex: 1; font: 600 1.14rem var(--ui); }
+  .acc-ico { font: 400 1.4rem var(--sans); color: var(--muted); transition: transform .25s; }
+  .acc-item[open] .acc-ico { transform: rotate(45deg); color: var(--acc); }
+  .acc-body { padding: 0 1.4rem 1.35rem 5.3rem; }
+  .acc-body p { font: 1.02rem/1.65 var(--sans); color: var(--text-soft); margin: 0; }
+  .big-question { max-width: 760px; margin: 3.4rem auto 0; text-align: center; font-style: italic; font-size: clamp(1.25rem, 2.3vw, 1.6rem); line-height: 1.45; color: var(--brand-d); }
+
+  .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 3.4rem; align-items: center; }
+  .split-text h2 { font-size: clamp(1.75rem, 3.3vw, 2.5rem); font-weight: 700; letter-spacing: -.02em; margin: 0 0 1rem; }
+  .split-text > p { color: var(--muted); font-size: 1.14rem; margin: 0 0 .9rem; }
+  .split-text > p b { color: var(--text); font-weight: 600; }
+  .mae-head { font: 700 .72rem var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--brand-d); margin: 1.4rem 0 .5rem; }
+  .mae-strip { display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); gap: .8rem; margin: 0; }
+  .mae-strip > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: .7rem .9rem; }
+  .section.alt .mae-strip > div { background: var(--surface); }
+  .mae-strip dt { font: 700 1.5rem/1 var(--ui); letter-spacing: -.02em; }
+  .mae-strip dd { margin: .35rem 0 0; font: .78rem/1.4 var(--sans); color: var(--text-soft); }
+  .mae-strip em { font-style: normal; color: var(--muted); }
+
+  /* charts (OpenSLA dot/dumbbell format) */
+  .chart { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: 1.3rem 1.4rem 1.1rem; font-family: var(--sans); }
+  .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  .seg button { border: 0; background: none; cursor: pointer; font: 600 .86rem var(--ui); color: var(--muted); padding: .38rem .85rem; border-radius: 6px; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(10,70,78,.14); }
+  .chart-body { --lab: var(--lab-w, 210px); --val: var(--val-w, 150px); }
+  .c-axis, .c-row { display: grid; grid-template-columns: var(--lab) minmax(0, 1fr) var(--val); column-gap: .9rem; align-items: center; }
+  .c-axis { height: 22px; font-size: .74rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .c-axis .c-track span { position: absolute; transform: translateX(-50%); }
+  .c-row { position: relative; height: 44px; border-radius: 6px; }
+  .c-row:hover, .c-row:focus { background: rgba(15,124,134,.05); outline: none; }
+  .c-name { font-size: .92rem; font-weight: 500; padding-left: .35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c-name small { display: block; font-size: .74rem; color: var(--muted); font-weight: 400; margin-top: -2px; }
+  .c-row.ours .c-name { color: var(--brand-d); font-weight: 600; }
+  .c-track { position: relative; height: 100%; }
+  .c-grid { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line-soft); }
+  .c-link { position: absolute; top: 50%; height: 2px; margin-top: -1px; background: #c3dadc; transition: left .5s cubic-bezier(.2,.7,.2,1), width .5s cubic-bezier(.2,.7,.2,1); }
+  .c-dot { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); transition: left .5s cubic-bezier(.2,.7,.2,1), opacity .3s; }
+  .c-dot.ours { background: var(--brand); z-index: 1; }
+  .c-dot.base { background: var(--base); }
+  .c-val { font-size: .76rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; line-height: 1.25; }
+  .c-val b { display: block; color: var(--text); font-weight: 600; font-size: .98rem; }
+  .c-tip { position: absolute; z-index: 5; left: calc(var(--lab) + .9rem); bottom: calc(100% - 2px); pointer-events: none; background: var(--text); color: #fff; font-size: .8rem;
+    line-height: 1.45; padding: .45rem .65rem; border-radius: 7px; white-space: nowrap; opacity: 0; transform: translateY(4px); transition: opacity .15s, transform .15s; }
+  .c-row:hover .c-tip, .c-row:focus .c-tip { opacity: 1; transform: none; }
+  .lp-tabs { display: flex; flex-wrap: wrap; gap: .8rem 1rem; margin-bottom: .9rem; }
+  .lp-tabs .seg { flex-wrap: wrap; }
+  .lp-grp { display: block; font: 700 .68rem var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 .35rem .2rem; }
+  .seg.id { background: rgba(15,124,134,.10); border-color: rgba(15,124,134,.35); }
+  .seg.id button { color: var(--brand-d); }
+  .lp-info { font: .84rem var(--sans); color: var(--muted); margin: 0 0 .9rem; }
+  .dist-tag { display: inline-block; font: 700 .66rem var(--ui); letter-spacing: .08em; text-transform: uppercase; padding: .15rem .5rem; border-radius: 99px; margin-right: .55rem; background: var(--surface-2); color: var(--muted); }
+  .dist-tag.id { background: rgba(15,124,134,.12); color: var(--brand-d); }
+  .c-row.ours { background: rgba(15,124,134,.05); }
+  .chart-note { font-size: .8rem; color: var(--muted); margin: .9rem 0 0; }
+
+
+  /* how it works */
+  .how-steps { list-style: none; margin: 1.6rem auto 0; padding: 0; max-width: 1100px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+  .how-steps li { padding: 1rem 1.1rem 1.1rem; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--acc); transition: box-shadow .25s, transform .25s; }
+  .how-steps li:hover { box-shadow: var(--shadow); transform: translateY(-3px); }
+  .step-no { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; margin-bottom: .6rem; font: 700 .82rem var(--ui); color: var(--acc); border: 2px solid var(--acc); }
+  .how-steps h3 { font: 600 1.02rem/1.3 var(--ui); }
+  .how-steps p { font: .9rem/1.6 var(--sans); color: var(--muted); margin: .45rem 0 0; }
+
+
+  /* imputation demo (Timestral-style card) */
+  .demo { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-sm); overflow: hidden; font-family: var(--sans); }
+  .d-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 18px 22px 4px; }
+  .d-modes { display: flex; gap: 4px; flex-wrap: wrap; }
+  .d-modes button { display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; border: 0; border-radius: 10px; background: none; color: var(--muted); cursor: pointer; font: 500 .95rem var(--sans); }
+  .d-modes .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-2); }
+  .d-modes button[aria-pressed="true"] { color: var(--brand-d); }
+  .d-modes button[aria-pressed="true"] .ic { background: var(--text); color: #fff; }
+  .d-band { display: grid; grid-template-columns: 1fr 76px; padding-left: 22px; }
+  .d-band > div:first-child { position: relative; }
+  .d-band svg { width: 100%; }
+  .d-main svg { height: 260px; }
+  .d-ylab { grid-column: 2; grid-row: 1; position: relative; font-size: .78rem; color: var(--muted); }
+  .d-ylab span { position: absolute; left: 10px; transform: translateY(-50%); }
+  .d-target { position: absolute; left: 0; top: 4px; font-size: .9rem; color: var(--muted); }
+  .d-target b { color: var(--text); font-weight: 600; }
+  .d-legend { position: absolute; left: 0; bottom: 6px; display: flex; gap: 14px; font-size: .78rem; color: var(--muted); }
+  .d-legend span { white-space: nowrap; }
+  .d-legend i { display: inline-block; width: 16px; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+  .d-legend i.box { width: 12px; height: 12px; border: 1px solid var(--line); background: var(--bg-2); }
+  .d-tip { position: absolute; top: 30px; pointer-events: none; background: var(--text); color: #fff; border-radius: 7px; padding: 6px 10px; font-size: .8rem; line-height: 1.45; white-space: nowrap; opacity: 0; transition: opacity .1s; z-index: 2; }
+  .d-head { padding-top: 10px; padding-bottom: 10px; border-top: 1px solid var(--line); align-items: center; min-height: 52px; }
+  .d-head .ttl { font-weight: 600; font-size: .95rem; display: flex; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; }
+  .d-head small { color: var(--muted); font-weight: 400; }
+  .d-metric { color: var(--muted); font-weight: 400; }
+  .d-metric b { color: var(--brand-d); }
+  .reroll { justify-self: center; white-space: nowrap; padding: 4px 10px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); font-size: .78rem; cursor: pointer; }
+  .d-row { border-top: 1px solid var(--line); }
+  .d-row svg { height: 58px; -webkit-mask-image: linear-gradient(90deg, transparent 2%, #000 22%); mask-image: linear-gradient(90deg, transparent 2%, #000 22%); }
+  .d-row .name { position: absolute; left: 0; top: 50%; transform: translateY(-50%); font-size: .92rem; }
+  .d-row .name small { color: var(--muted); font-size: .76rem; margin-left: 5px; }
+  .tog { justify-self: center; align-self: center; width: 44px; height: 24px; border-radius: 99px; border: 0; padding: 0; cursor: pointer; background: #c9d3d4; position: relative; }
+  .tog::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .tog[aria-checked="true"] { background: var(--text); }
+  .tog[aria-checked="true"]::after { transform: translateX(20px); }
+  [hidden] { display: none !important; }
+  .d-axis { border-top: 1px solid var(--line); height: 40px; color: var(--muted); font-size: .8rem; }
+  .d-axis span { position: absolute; top: 10px; transform: translateX(-50%); }
+  .d-axis span:first-child { transform: none; }
+  .win { fill: var(--bg-2); }
+  .div { stroke: var(--line); stroke-width: 1; }
+  .obs { fill: none; stroke: var(--text); stroke-width: 2; }
+  .truth { fill: none; stroke: #b9c4c6; stroke-width: 2; }
+  .pred { fill: none; stroke: var(--brand); stroke-width: 2.5; stroke-linejoin: round; }
+  .d-row .obs { stroke: var(--muted); stroke-width: 1.5; }
+  .d-row .truth { stroke-width: 1.5; }
+  .d-row .pred { stroke-width: 1.75; }
+  .hair { stroke: var(--muted); stroke-width: 1; opacity: 0; }
+  .big-stat { text-align: center; font: 600 clamp(1.4rem, 3vw, 2rem)/1.3 var(--display); margin: 2.6rem 0 0; }
+  .big-stat b { font: 700 1.3em var(--ui); letter-spacing: -.02em; color: var(--brand-d); }
+  .big-stat-note { text-align: center; font: .84rem var(--sans); color: var(--muted); margin: .4rem 0 0; }
+  .demo-note { font: .84rem var(--sans); color: var(--muted); margin: .8rem .3rem 0; }
+
+  /* how it works: animated walkthrough */
+  .vid { display: grid; grid-template-columns: minmax(0, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .sb { position: relative; padding: 1.2rem 1.3rem .3rem; }
+  .sb-row { display: grid; grid-template-columns: minmax(0, 1.5fr) 30px minmax(0, 1fr) 30px minmax(0, 1fr) 30px minmax(0, 1.35fr); align-items: center;
+    padding: .9rem 1rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); transition: opacity .45s, border-color .45s; }
+  .sb-row + .sb-row { margin-top: .9rem; }
+  .sb-row.s1 { padding-bottom: 2.4rem; border-color: rgba(15,124,134,.35); }
+  .sb-row.s2 { border-color: rgba(201,118,28,.4); }
+  .sb-row.dim { opacity: .32; }
+  .sb-head { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: .4rem .6rem; margin-bottom: .8rem; }
+  .sb-stage { font: 700 .8rem var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--brand-d); }
+  .s2 .sb-stage { color: #a35c10; }
+  .sb-chip { font: 600 .72rem var(--ui); padding: .16rem .6rem; border-radius: 99px; background: var(--surface-2); color: var(--text-soft); }
+  .sb-goal { margin-left: auto; font: .84rem var(--sans); color: var(--muted); }
+  .sb-goal b { color: var(--text); font-weight: 600; }
+  .sb-arrow { height: 2px; margin: 0 5px; background: #c8d6d7; position: relative; }
+  .sb-arrow::after { content: ""; position: absolute; right: -1px; top: -4px; border-left: 6px solid #c8d6d7; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+  .sb-thumb { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+  .sb-thumb svg { display: block; width: 100%; height: 104px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); transition: opacity .4s; }
+  .sb-thumb svg.wait { opacity: .15; }
+  .sb-cap { font: .74rem var(--sans); color: var(--muted); text-align: center; }
+  .sb-thumb .pg rect { fill: transparent; transition: fill .3s; }
+  .sb-thumb .tr { fill: none; stroke: var(--text-soft); stroke-width: 1.2; transition: opacity .3s; }
+  .sb-thumb .rc { fill: none; stroke: var(--brand); stroke-width: 1.6; opacity: 0; transition: opacity .3s; }
+  #sb-in1 .pg.on rect { fill: #d9e7e8; }
+  #sb-in1 .pg.on .tr { opacity: 0; }
+  #sb-out1 .pg.m rect { fill: #eef5f5; }
+  #sb-out1 .pg.m .tr { opacity: 0; }
+  #sb-out1 .pg.rec .rc { opacity: 1; }
+  .sb-box { position: relative; overflow: hidden; border: 1.5px solid var(--line); border-radius: 10px; padding: .65rem .6rem; text-align: center; background: var(--surface); transition: box-shadow .3s, opacity .3s, border-color .3s; }
+  .sb-box b { display: block; font: 700 .95rem var(--ui); }
+  .sb-box span { display: block; font: .74rem var(--sans); color: var(--muted); margin-top: .15rem; min-height: 1.2em; }
+  .sb-box.enc { border-color: var(--brand); background: #eef7f7; }
+  .sb-box.enc b { color: var(--brand-d); }
+  .sb-box.on { box-shadow: 0 0 0 4px rgba(15,124,134,.16); }
+  .sb-box.enc.empty { border-style: dashed; background: var(--surface); }
+  .sb-box.enc.empty b { color: var(--muted); }
+  .sb-box .fill { position: absolute; left: 0; bottom: 0; height: 4px; width: 0; background: var(--grad); }
+  .sb-box.drop { border-style: dashed; opacity: .5; }
+  .sb-box.drop b { text-decoration: line-through; }
+  .sb-box.head { border-color: #e2b88a; }
+  .sb-box.head.on { border-color: #c9761c; background: #fff8f0; box-shadow: 0 0 0 4px rgba(201,118,28,.16); }
+  .sb-ghost { position: absolute; left: 0; top: 0; z-index: 4; opacity: 0; pointer-events: none; box-shadow: var(--shadow); }
+  .sb-loss { grid-column: 3 / 8; grid-row: 3; position: relative; height: 16px; margin: .55rem 21% 0 14%; border: 2px dashed var(--brand); border-top: 0; border-radius: 0 0 10px 10px; opacity: 0; transition: opacity .3s; }
+  .sb-loss::before { content: ""; position: absolute; left: -7px; top: -9px; border-bottom: 8px solid var(--brand); border-left: 6px solid transparent; border-right: 6px solid transparent; }
+  .sb-loss span { position: absolute; left: 50%; top: 100%; transform: translate(-50%, .3rem); white-space: nowrap; font: 600 .76rem var(--ui); color: var(--brand-d); }
+  .sb-loss.on { opacity: 1; }
+  .sb-rep { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; padding: .5rem; border: 1px solid var(--line); border-radius: 6px; }
+  .sb-rep i { height: 16px; border-radius: 2px; opacity: .08; transition: opacity .25s; }
+  .sb-rep i.on { opacity: 1; }
+  .sb-cls { display: flex; flex-direction: column; gap: .45rem; }
+  .sb-out { text-align: center; font: 700 1.3rem var(--ui); color: var(--brand-d); min-height: 2.6rem; }
+  .sb-out small { display: block; font: .72rem var(--sans); color: var(--muted); }
+  .vid-segs { flex: 1; display: grid; grid-template-columns: 4fr 5.2fr 3.4fr 5.6fr; gap: 8px; }
+  .vid-segs button { display: flex; flex-direction: column; gap: 6px; border: 0; padding: 0; background: none; cursor: pointer; text-align: left; }
+  .vid-segs i { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .vid-segs i b { display: block; height: 100%; width: 0; background: var(--brand); }
+  .vid-segs .s2 i b { background: #c9761c; }
+  .vid-segs span { font: 600 .72rem var(--ui); color: var(--muted); }
+  .vid-segs .cur span { color: var(--text); }
+  .how-steps.two { grid-template-columns: repeat(2, 1fr); }
+  .d-tog-main { grid-column: 2; grid-row: 1; align-self: start; margin-top: 8px; z-index: 1; }
+  .vid-cap { font: 1rem/1.5 var(--sans); color: var(--text-soft); margin: .4rem 1.3rem 1rem; min-height: 3em; }
+  .vid-cap b { color: var(--text); }
+  .vid-bar { grid-column: 1 / -1; display: flex; align-items: center; gap: .8rem; padding: .6rem 1.2rem .8rem; border-top: 1px solid var(--line); }
+  .vid-play { width: 32px; height: 32px; flex: none; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: .68rem; color: var(--text-soft); }
+  .how-steps li { cursor: pointer; }
+  .how-steps li.on { box-shadow: var(--shadow); transform: translateY(-3px); }
+  .how-steps li.on .step-no { background: var(--acc); color: #fff; }
+  .fig-link { text-align: center; font: .9rem var(--sans); margin: 1.6rem 0 0; }
+  .fig-link a { color: var(--brand-d); border-bottom: 1px solid var(--line); }
+
+  /* cite */
+  .cta-band { padding: 104px 0; text-align: center; background: radial-gradient(ellipse 60% 120% at 50% 0%, rgba(15,124,134,.12), transparent 60%), var(--bg); }
+  .cta-band h2 { font-size: clamp(1.9rem, 4vw, 2.8rem); font-weight: 700; letter-spacing: -.02em; margin-top: .7rem; }
+  .cta-band p { color: var(--muted); font-size: 1.2rem; max-width: 640px; margin: .9rem auto 0; }
+  .bib { max-width: 680px; margin: 3rem auto 0; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; }
+  .bib-bar { display: flex; align-items: center; gap: .7rem; padding: .5rem .6rem .5rem 1rem; border-bottom: 1px solid var(--line); font: 600 .78rem var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .bib-bar span:first-child { flex: 1; }
+  .bib-bar button { border: 1px solid var(--line); background: var(--surface); border-radius: 7px; padding: .3rem .7rem; cursor: pointer; font: 600 .78rem var(--ui); color: var(--text-soft); }
+  .bib pre { margin: 0; padding: 1rem 1.1rem; overflow-x: auto; color: var(--text-soft); font: .84rem/1.6 "SFMono-Regular", Menlo, Consolas, monospace; }
+  .footer { border-top: 1px solid var(--line-soft); padding: 38px 0; }
+  .foot-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.2rem; }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 1.3rem; }
+  .foot-links a { color: var(--muted); font: .95rem var(--sans); }
+  .foot-copy { color: var(--muted); font: .85rem var(--sans); width: 100%; margin: 0; padding-top: .9rem; border-top: 1px solid var(--line-soft); }
+
+  .js .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+  .js .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .js .reveal { opacity: 1; transform: none; transition: none; } .c-dot, .c-link, .probs .bar i { transition: none; } .sb-ghost { transition: none; } html { scroll-behavior: auto; } }
+
+  @media (max-width: 1020px) {
+    .split, .hero-head { grid-template-columns: 1fr; gap: 2.2rem; }
+    .stage { grid-template-columns: 1fr; }
+    .stage-pred { border-left: 0; border-top: 1px solid var(--line); }
+    .how-steps { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 820px) {
+    .nav-links li:not(:last-child) { display: none; }
+    .section { padding: 76px 0; }
+    .hero { padding-top: 92px; }
+    .lanes svg { height: 260px; }
+    .chip-btn.ghost { margin-left: 0; }
+    .how-steps { grid-template-columns: 1fr; }
+    .mae-strip { grid-template-columns: repeat(2, 1fr); }
+    .acc-body { padding-left: 1.4rem; }
+    .chart-body { --lab: 140px; --val: 0px; }
+    .c-name { white-space: normal; line-height: 1.25; }
+    .sb { padding: .9rem .8rem .2rem; }
+    .sb-row { grid-template-columns: 1fr; }
+    .sb-row.s1 { padding-bottom: 1rem; }
+    .sb-goal { margin-left: 0; }
+    .sb-arrow { width: 2px; height: 14px; margin: 5px auto; }
+    .sb-arrow::after { right: -4px; top: auto; bottom: -1px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #c8d6d7; border-bottom: 0; }
+    .sb-loss { grid-column: 1; grid-row: auto; margin: .6rem 0 0; height: auto; border: 0; }
+    .sb-loss::before { display: none; }
+    .sb-loss span { position: static; display: block; transform: none; text-align: center; white-space: normal; }
+    .vid-cap { margin: .4rem .8rem .8rem; }
+    .vid-segs span { font-size: .62rem; }
+    .how-steps.two { grid-template-columns: 1fr; }
+    .c-row { height: auto; min-height: 44px; padding: 4px 0; }
+    .c-val { display: none; }
+    .c-tip { left: 0; white-space: normal; }
+    .d-band { grid-template-columns: 1fr 56px; padding-left: 14px; }
+    .d-main svg { height: 220px; }
+    .d-modes button:not([aria-pressed="true"]) .lbl { display: none; }
+    .d-row .name small { display: none; }
+    .d-row svg { -webkit-mask-image: linear-gradient(90deg, transparent 2%, #000 40%); mask-image: linear-gradient(90deg, transparent 2%, #000 40%); }
+    .d-legend { gap: 8px; font-size: .72rem; }
+    .reroll { padding: 4px 7px; font-size: .72rem; }
+  }
+</style>
+<script>document.documentElement.classList.add('js');</script>
+</head>
+<body id="top">
+
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span><span>Mo<span>CA</span></span></a>
+    <nav aria-label="Main navigation">
+      <ul class="nav-links">
+        <li><a href="#idea">The idea</a></li>
+        <li><a href="#findings">Findings</a></li>
+        <li><a href="#imputation">Imputation</a></li>
+        <li><a href="#how">How it works</a></li>
+        <li><a class="btn-mini" href="https://arxiv.org/abs/2506.02260">Paper</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ============ Hero: the classifier, live ============ -->
+<section class="hero">
+  <div class="hero-bg" aria-hidden="true"><span class="orb orb-1"></span><span class="orb orb-2"></span><span class="orb orb-3"></span><div class="grid-fade"></div></div>
+  <div class="wrap hero-inner">
+    <div class="stage reveal" aria-label="Live activity classification">
+      <div class="stage-plot">
+        <div class="stage-top"><span class="kicker">Activity classification on UCI-HAR</span><span class="stage-sub" id="stage-sub"></span></div>
+        <div class="lanes" id="lanes"><svg id="traces" viewBox="0 0 1000 330" preserveAspectRatio="none" aria-hidden="true"></svg></div>
+      </div>
+      <div class="stage-pred" aria-live="polite">
+        <span class="kicker">MoCA predicts</span>
+        <div class="pred-label" id="pred-label"></div>
+        <div class="pred-truth" id="pred-truth"></div>
+        <ol class="probs" id="probs"></ol>
+      </div>
+    </div>
+    <div class="stage-ctl reveal" role="group" aria-label="Pick an activity">
+      <span class="lbl">Try a window</span>
+      <span id="chips" style="display:contents"></span>
+      <button class="chip-btn ghost" id="next" type="button">↻ Another window</button>
+    </div>
+    <p class="stage-note reveal" id="stage-note"></p>
+
+    <div class="hero-head">
+      <div class="hero-title">
+        <h1><span class="mo">Mo</span><span class="grad-text">CA</span></h1>
+        <p class="type-line"><span>M</span>ulti-m<span>o</span>dal <span>C</span>ross-masked <span>A</span>utoencoder</p>
+        <p class="type-sub">for Time Series in Digital Health</p>
+        <p class="byline">
+          Howon Ryu<sup>*</sup>, Yuliang Chen<sup>*</sup>, Yacun Wang, Andrea Z. LaCroix, Chongzhi Di, Loki Natarajan, Yu Wang<sup>†</sup>, Jingjing Zou<sup>†</sup>
+          <span class="affil">UC San Diego · Fred Hutchinson Cancer Center · <sup>*</sup>equal contribution · <sup>†</sup>corresponding</span>
+        </p>
+        <div class="cta-row">
+          <a class="btn" href="https://arxiv.org/abs/2506.02260"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h6"/></svg>Paper</a>
+          <a class="btn" href="https://github.com/HowonRyu/MoCA"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 8-5 4 5 4M15 8l5 4-5 4"/></svg>Code</a>
+          <a class="btn" href="https://github.com/HowonRyu/MoCA/tree/main/checkpoints"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5zM3 16l9 5 9-5M3 12l9 5 9-5"/></svg>Models</a>
+          <a class="btn" href="#cite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 7h4v4H7zM7 11c0 3-1 5-3 6M15 7h4v4h-4zM15 11c0 3-1 5-3 6"/></svg>Cite</a>
+        </div>
+      </div>
+      <div class="hero-type">
+        <div class="lead-line"><span class="ln-no">Self-supervised</span>A masked autoencoder framework for multi-modal wearable time series.</div>
+        <div class="lead-line"><span class="ln-no">Cross-modality masking</span>Patches from different modalities are masked independently across time windows.</div>
+        <div class="lead-line"><span class="ln-no">Classification</span><span><b>93.1%</b> linear probing accuracy on UCI-HAR, and the top accuracy on five of six unseen datasets.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ The idea ============ -->
+<section class="section alt" id="idea">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="kicker">The big idea</span>
+      <h2>Leverage the cross-modal correlations in wearable sensor data.</h2>
+      <p>Analysis of wearable data streams faces two fundamental challenges: the lack of gold-standard labels and incomplete sensor data.</p>
+    </div>
+    <div class="accordion reveal">
+      <details class="acc-item a-teal" open>
+        <summary><span class="acc-num">01</span><span class="acc-title">Missing gold-standard labels</span><span class="acc-ico" aria-hidden="true">+</span></summary>
+        <div class="acc-body"><p>Unlike computer vision and natural language processing, wearable health data analysis often relies on small clinical studies with missing gold-standard labels. Self-supervised learning addresses this by learning meaningful representations from unlabeled data.</p></div>
+      </details>
+      <details class="acc-item a-blue">
+        <summary><span class="acc-num">02</span><span class="acc-title">Synchronized masking limits cross-modal learning</span><span class="acc-ico" aria-hidden="true">+</span></summary>
+        <div class="acc-body"><p>Synchronized masking removes the same time windows across all modalities simultaneously. With all modality information at a time point removed at once, the model relies more on temporal correlations than on inter-modality relationships.</p></div>
+      </details>
+      <details class="acc-item a-green">
+        <summary><span class="acc-num">03</span><span class="acc-title">Cross-modality masking</span><span class="acc-ico" aria-hidden="true">+</span></summary>
+        <div class="acc-body"><p>MoCA masks patches from different modalities independently across time windows. The model infers missing signals in one modality from the remaining modalities at the same or nearby time points.</p></div>
+      </details>
+      <details class="acc-item a-orange">
+        <summary><span class="acc-num">04</span><span class="acc-title">A theoretical link to kernel CCA</span><span class="acc-ico" aria-hidden="true">+</span></summary>
+        <div class="acc-body"><p>MAE reconstruction reduces to maximizing the alignment between the unmasked and masked views, a kernel canonical correlation analysis (KCCA) problem. Synchronized masking weakens this association because no modality remains available at a given time point. MoCA preserves cross-modal cues, so the learned representations better capture patterns that span multiple sensing modalities.</p></div>
+      </details>
+    </div>
+    <p class="big-question reveal">“Cross-modality masking encourages the encoder to learn richer representations that preserve both within-modality structure and cross-modality relationships.”</p>
+  </div>
+</section>
+
+<!-- ============ Findings: linear probing in and out of distribution ============ -->
+<section class="section" id="findings">
+  <div class="wrap">
+    <div class="section-head reveal"><span class="kicker">What we found</span></div>
+    <div class="split">
+      <div class="split-text reveal">
+        <h2>Stronger representations, in and out of distribution.</h2>
+        <p>With the encoder frozen, MoCA reaches <b>93.1%</b> linear probing accuracy on UCI-HAR, its pre-training dataset, ahead of HAR-Net, pre-trained on 700,000 person-days of UK Biobank data, and MAE Synchronized Masking.</p>
+        <p>On six out-of-distribution datasets, MoCA achieves the top accuracy on <b>five</b>, transferring from six-channel pre-training (accelerometer + gyroscope) to accelerometer-only data. Its masking strategy and pre-training design yield stronger representations immediately useful for downstream tasks.</p>
+        <div class="mae-head">Linear probing top-1 accuracy (%)</div>
+        <dl class="mae-strip" style="--n:2">
+          <div><dt>93.1</dt><dd>UCI-HAR<br><em>in-distribution</em></dd></div>
+          <div><dt>69.8</dt><dd>Average over six unseen datasets<br><em>+17.1 points over HAR-Net</em></dd></div>
+        </dl>
+      </div>
+      <div class="reveal">
+        <div class="chart" id="lp-chart">
+          <div class="lp-tabs" role="group" aria-label="Dataset">
+            <div><span class="lp-grp">In-distribution</span><div class="seg id" id="lp-id"></div></div>
+            <div><span class="lp-grp">Out-of-distribution</span><div class="seg" id="lp-ood"></div></div>
+          </div>
+          <p class="lp-info" id="lp-info"></p>
+          <div class="chart-body"></div>
+          <p class="chart-note">Linear probing top-1 accuracy (%): the pre-trained encoder is frozen and only a classification head is trained. UCI-HAR uses the standard training/test split. Unseen datasets show mean ± SD across subject-wise cross-validation folds (Table 2). HAR-Net pre-trained on UK Biobank is evaluated with the same protocol and is not part of the paper’s tables.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Imputation ============ -->
+<section class="section alt" id="imputation">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="kicker">Generative task</span>
+      <h2>Realistic reconstructions under diverse missingness patterns.</h2>
+      <p>Signal loss is common in wearable data, from sensor glitches, battery depletion, device malfunction or participant non-compliance. The pre-trained encoder–decoder reconstructs masked inputs under four missing data scenarios. Shaded patches are masked; the teal line is MoCA's reconstruction.</p>
+    </div>
+    <div class="demo reveal" aria-label="Interactive imputation demo">
+      <div class="d-top">
+        <div class="seg" id="d-tabs" role="group" aria-label="Activity"></div>
+        <div class="d-modes" id="d-modes" role="group" aria-label="Missing-data pattern"></div>
+      </div>
+      <div class="d-band d-main">
+        <div>
+          <div class="d-target"><b id="d-focus"></b> &nbsp;g</div>
+          <svg id="d-svg" viewBox="0 0 1000 260" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div class="d-legend"><span><i style="border-color:var(--text)"></i>Observed</span><span><i class="box"></i>Hidden</span><span><i style="border-color:#b9c4c6"></i>Truth</span><span><i style="border-color:var(--brand)"></i>MoCA</span></div>
+          <div class="d-tip" id="d-tip"></div>
+        </div>
+        <div class="d-ylab" id="d-ylab"></div>
+        <button class="tog d-tog-main" id="d-tog-main" type="button" role="switch"></button>
+      </div>
+      <div class="d-band d-head">
+        <div class="ttl"><span>Other sensors <small id="d-hint"></small></span><span class="d-metric" id="d-metric"></span></div>
+        <button class="reroll" id="d-reroll" type="button" title="Draw another mask">↻ New</button>
+      </div>
+      <div id="d-rows"></div>
+      <div class="d-band d-axis"><div id="d-axis"></div><div></div></div>
+    </div>
+    <p class="demo-note" id="d-desc"></p>
+    <p class="big-stat reveal"><b>3× lower</b> imputation error than MICE</p>
+    <p class="big-stat-note">Average MSE over the four missing-data patterns on the UCI-HAR test set (Table 3 of the paper).</p>
+  </div>
+</section>
+
+<!-- ============ How it works: a short animated walkthrough on a real window ============ -->
+<section class="section" id="how">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="kicker">How it works</span>
+      <h2>Two stages: learn an encoder, then classify with it</h2>
+      <p>Stage 1 pre-trains the encoder on unlabeled data by masked reconstruction. Stage 2 uses the encoder’s representations to train an activity classifier.</p>
+    </div>
+    <div class="vid reveal" id="vid" aria-label="Animated walkthrough of MoCA's two training stages on a real UCI-HAR test window">
+      <div class="sb" id="sb" aria-hidden="true">
+        <div class="sb-row s1" id="sb-r1">
+          <div class="sb-head"><span class="sb-stage">Stage 1 · Pre-training</span><span class="sb-chip">unlabeled data</span><span class="sb-goal">Goal: <b>learn the encoder</b></span></div>
+          <div class="sb-thumb"><svg id="sb-in1" viewBox="0 0 1000 120" preserveAspectRatio="none"></svg><span class="sb-cap">input with masked patches</span></div>
+          <i class="sb-arrow"></i>
+          <div class="sb-box enc" id="sb-enc1"><b>Encoder</b><span></span><i class="fill"></i></div>
+          <i class="sb-arrow"></i>
+          <div class="sb-box" id="sb-dec"><b>Decoder</b><span></span></div>
+          <i class="sb-arrow"></i>
+          <div class="sb-thumb"><svg id="sb-out1" viewBox="0 0 1000 120" preserveAspectRatio="none"></svg><span class="sb-cap">reconstructed window</span></div>
+          <div class="sb-loss" id="sb-loss"><span>reconstruction error updates the encoder</span></div>
+        </div>
+        <div class="sb-row s2" id="sb-r2">
+          <div class="sb-head"><span class="sb-stage">Stage 2 · Classification</span><span class="sb-chip">labeled data</span><span class="sb-goal">Goal: <b>predict the activity</b></span></div>
+          <div class="sb-thumb"><svg id="sb-in2" viewBox="0 0 1000 120" preserveAspectRatio="none"></svg><span class="sb-cap">full input, no masking</span></div>
+          <i class="sb-arrow"></i>
+          <div class="sb-box enc" id="sb-enc2"><b>Encoder</b><span></span></div>
+          <i class="sb-arrow"></i>
+          <div class="sb-thumb"><div class="sb-rep" id="sb-rep"></div><span class="sb-cap">representation</span></div>
+          <i class="sb-arrow"></i>
+          <div class="sb-cls"><div class="sb-box head" id="sb-head"><b>Classifier head</b><span></span></div><div class="sb-out" id="sb-out"></div></div>
+        </div>
+        <div class="sb-box enc sb-ghost" id="sb-ghost"><b>Encoder</b><span>trained ✓</span></div>
+      </div>
+      <p class="vid-cap" aria-live="polite"><b id="vid-k"></b> <span id="vid-cap"></span></p>
+      <div class="vid-bar">
+        <button class="vid-play" id="vid-play" type="button" aria-label="Pause">❚❚</button>
+        <div class="vid-segs" id="vid-segs"></div>
+      </div>
+    </div>
+    <ol class="how-steps two reveal" id="how-steps">
+      <li class="a-teal"><span class="step-no">1</span><h3>Stage 1 · Pre-training</h3><p>Masked autoencoding on unlabeled data. Patches are hidden independently across sensors and the decoder reconstructs them. The reconstruction error trains the encoder; afterwards the decoder is discarded.</p></li>
+      <li class="a-orange"><span class="step-no">2</span><h3>Stage 2 · Classification</h3><p>Labeled windows pass through the pre-trained encoder, and a classification head maps its representation to the activity. Linear probing trains only the head; fine-tuning also updates the encoder.</p></li>
+    </ol>
+    <p class="fig-link"><a href="figure1.png" target="_blank" rel="noopener">See the full framework in Figure 1 of the paper →</a></p>
+  </div>
+</section>
+
+<!-- ============ Cite ============ -->
+<section class="cta-band" id="cite">
+  <div class="wrap reveal">
+    <span class="kicker">The paper</span>
+    <h2>Self-supervised learning for multi-modal wearable data</h2>
+    <p>A novel solution for leveraging unlabeled multi-modal wearable data while handling missing modalities, with broad applications across digital health domains.</p>
+    <div class="cta-row center">
+      <a class="btn" href="https://arxiv.org/abs/2506.02260">Paper</a>
+      <a class="btn" href="https://github.com/HowonRyu/MoCA">Code</a>
+      <a class="btn" href="https://github.com/HowonRyu/MoCA/tree/main/checkpoints">Models</a>
+    </div>
+    <div class="bib">
+      <div class="bib-bar"><span>BibTeX</span><span id="copy-status" role="status"></span><button id="copy-bib" type="button">Copy</button></div>
+<pre><code id="bibtex">@article{ryu2025moca,
+  title   = {MoCA: Multi-modal Cross-masked Autoencoder for Time Series in Digital Health},
+  author  = {Ryu, Howon and Chen, Yuliang and Wang, Yacun and LaCroix, Andrea Z. and
+             Di, Chongzhi and Natarajan, Loki and Wang, Yu and Zou, Jingjing},
+  journal = {arXiv preprint arXiv:2506.02260},
+  year    = {2025}
+}</code></pre>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="wrap foot-inner">
+    <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span><span>Mo<span>CA</span></span></a>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="#idea">The idea</a><a href="#findings">Findings</a><a href="#imputation">Imputation</a><a href="#how">How it works</a>
+      <a href="https://arxiv.org/abs/2506.02260">Paper</a><a href="https://github.com/HowonRyu/MoCA">Code</a>
+    </nav>
+    <p class="foot-copy">UC San Diego · Fred Hutchinson Cancer Center. UCI-HAR: Reyes-Ortiz et al., 2013, UCI Machine Learning Repository.</p>
+  </div>
+</footer>
+
+<script src="demo-data.js"></script>
+<script>
+const D = window.DEMO, N = 200;
+const $ = id => document.getElementById(id);
+const NS = 'vector-effect="non-scaling-stroke"';
+const X = t => t / (N - 1) * 1000;
+const line = (pts, y) => pts.map(([t, v], i) => (i ? 'L' : 'M') + X(t).toFixed(1) + ' ' + y(v).toFixed(1)).join('');
+const scale = (lo, hi, top, h, pad) => v => top + pad + (1 - (v - lo) / (hi - lo || 1)) * (h - 2 * pad);
+const press = (group, on) => group.forEach(b => b.setAttribute('aria-pressed', b === on));
+
+// nav background on scroll
+addEventListener('scroll', () => $('nav').classList.toggle('scrolled', scrollY > 10), { passive: true });
+
+/* ---------- Hero: fine-tuned MoCA on real test windows ---------- */
+(() => {
+  const C = D.cls, ORDER = [1, 2, 3, 4, 5, 6, 0], LANE = 55;
+  const st = { c: 1, k: 0 };
+  $('stage-note').textContent = `Example UCI-HAR test windows classified by the released fine-tuned MoCA checkpoint, which reaches ${C.acc.toFixed(2)}% top-1 accuracy on all ${C.n} test windows.`;
+  const lanes = $('lanes');
+  D.channels.forEach((name, c) => lanes.insertAdjacentHTML('beforeend', `<span class="ch" style="top:${(c + .5) * LANE / 330 * 100}%">${name}</span>`));
+  ORDER.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'chip-btn'; b.type = 'button'; b.textContent = C.names[c]; b.dataset.c = c;
+    b.onclick = () => { st.k = st.c === c ? st.k + 1 : 0; st.c = c; draw(); };
+    $('chips').append(b);
+  });
+  $('next').onclick = () => { st.k++; draw(); };
+
+  function draw() {
+    const list = C.windows.filter(w => w.label === st.c), w = list[st.k % list.length];
+    let s = '';
+    for (let p = 1; p < 10; p++) s += `<line x1="${X(p * 20 - .5)}" x2="${X(p * 20 - .5)}" y1="0" y2="330" stroke="#e3eded" stroke-dasharray="3 4" ${NS}/>`;
+    w.x.forEach((v, c) => {
+      const lo = Math.min(...v), hi = Math.max(...v), y = scale(lo, hi, c * LANE, LANE, 8);
+      if (c) s += `<line x1="0" x2="1000" y1="${c * LANE}" y2="${c * LANE}" stroke="#ebf3f3" ${NS}/>`;
+      s += `<path d="${line(v.map((u, t) => [t, u]), y)}" fill="none" stroke="${c < 3 ? '#3f7fc4' : '#0f7c86'}" stroke-width="1.6" ${NS}/>`;
+    });
+    const svg = $('traces');
+    svg.classList.add('fade');
+    setTimeout(() => { svg.innerHTML = s; svg.classList.remove('fade'); }, 120);
+
+    const top = w.p.indexOf(Math.max(...w.p)), ok = top === w.label;
+    $('pred-label').textContent = C.names[top];
+    $('pred-truth').innerHTML = `True label: ${C.names[w.label]} &nbsp;<b class="${ok ? 'ok' : 'no'}">${ok ? '✓ correct' : '✗ missed'}</b>`;
+    $('probs').innerHTML = ORDER.map(c => `<li class="${c === top ? 'top' : ''}"><span>${C.names[c]}</span><span class="bar"><i style="width:${(w.p[c] * 100).toFixed(1)}%"></i></span><span class="pct">${(w.p[c] * 100).toFixed(1)}%</span></li>`).join('');
+    $('stage-sub').textContent = `Test window #${w.index} · 4-second input · dashed lines mark 0.4 s patches`;
+    press([...$('chips').children], [...$('chips').children].find(b => +b.dataset.c === st.c));
+  }
+  draw();
+})();
+
+/* ---------- Linear probing: one tab per dataset, every model compared ---------- */
+(() => {
+  const MODELS = [
+    { name: 'HAR-Net', sub: 'pre-trained on UK Biobank' },
+    { name: 'MAE Synchronized Masking', sub: 'same backbone and data' },
+    { name: 'MoCA', sub: 'ours', ours: true },
+  ];
+  // [mean, SD] in MODELS order
+  const DS = [
+    { name: 'UCI-HAR', id: true, info: '30 subjects · 7 classes · accelerometer + gyroscope · pre-training dataset', v: [[87.60], [88.40], [93.10]] },
+    { name: 'WISDM', info: '46 subjects · 6 classes · accelerometer', v: [[67.03, 4.21], [65.65, 4.35], [68.98, 4.76]] },
+    { name: 'IMWSHA', info: '10 subjects · 11 classes · accelerometer + gyroscope', v: [[26.84, 1.84], [62.95, 6.47], [72.27, 10.55]] },
+    { name: 'OPPORTUNITY', info: '4 subjects · 4 classes · accelerometer', v: [[57.33, 7.39], [47.65, 12.35], [54.04, 16.60]] },
+    { name: 'ADL', info: '7 subjects · 5 classes · accelerometer', v: [[43.00, 7.29], [71.62, 3.05], [74.15, 0.74]] },
+    { name: 'PAMAP2', info: '8 subjects · 8 classes · accelerometer', v: [[56.60, 2.27], [72.83, 2.00], [77.80, 4.13]] },
+    { name: 'RealWorld', info: '14 subjects · 8 classes · accelerometer', v: [[65.48, 2.88], [66.18, 6.36], [71.54, 4.14]] },
+  ];
+  const body = $('lp-chart').querySelector('.chart-body');
+  const tab = (d, i) => `<button type="button" data-i="${i}">${d.name}</button>`;
+  $('lp-id').innerHTML = tab(DS[0], 0);
+  $('lp-ood').innerHTML = DS.slice(1).map((d, i) => tab(d, i + 1)).join('');
+  const btns = [...$('lp-chart').querySelectorAll('.lp-tabs button')];
+  btns.forEach(b => b.onclick = () => draw(+b.dataset.i));
+
+  function draw(i) {
+    const d = DS[i], rows = MODELS.map((m, j) => ({ ...m, v: d.v[j] })).filter(r => r.v);
+    const ext = rows.map(r => r.v[0]);
+    const step = Math.max(...ext) - Math.min(...ext) > 30 ? 10 : 5;
+    const lo = Math.floor((Math.min(...ext) - 2) / step) * step, hi = Math.min(100, Math.ceil((Math.max(...ext) + 1) / step) * step);
+    const pos = v => ((Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * 100) + '%';
+    const ticks = []; for (let t = lo; t <= hi; t += step) ticks.push(t);
+    let h = `<div class="c-axis" aria-hidden="true"><div></div><div class="c-track">${ticks.map(t => `<span style="left:${pos(t)}">${t}</span>`).join('')}</div><div></div></div>`;
+    for (const r of rows) {
+      const [m, sd] = r.v, txt = `${r.name}: ${m.toFixed(2)}${sd ? ' ± ' + sd.toFixed(2) : ''}%`;
+      h += `<div class="c-row ${r.ours ? 'ours' : ''}" tabindex="0" aria-label="${txt}"><div class="c-name">${r.name}<small>${r.sub}</small></div>
+        <div class="c-track">${ticks.map(t => `<span class="c-grid" style="left:${pos(t)}"></span>`).join('')}<span class="c-link" style="left:0;width:${pos(m)}"></span>`
+        + `<span class="c-dot ${r.ours ? 'ours' : 'base'}" style="left:${pos(m)}"></span></div>
+        <div class="c-val"><b>${m.toFixed(2)}</b>${sd ? '± ' + sd.toFixed(2) : ''}</div><div class="c-tip">${txt}</div></div>`;
+    }
+    body.innerHTML = h;
+    $('lp-info').innerHTML = `<span class="dist-tag ${d.id ? 'id' : ''}">${d.id ? 'In-distribution' : 'Out-of-distribution'}</span>${d.info}`;
+    btns.forEach((b, j) => b.setAttribute('aria-pressed', j === i));
+  }
+  draw(0);
+})();
+
+/* ---------- Imputation demo (paper's four settings, real model outputs) ---------- */
+(() => {
+  const F = D.focus, COVS = [0, 1, 2, 3, 4, 5].filter(c => c !== F);
+  const TASKS = {
+    random: { label: 'Random dropout', icon: 'M3 3h2v2H3zM9 3h2v2H9zM6 6h2v2H6zM3 9h2v2H3zM9 9h2v2H9z', desc: 'Random imputation tests local reconstruction: patches are removed at random positions across time and modalities.' },
+    temporal: { label: 'Missing interval', icon: 'M2 2v10M12 2v10M5 7h4', desc: 'Temporal imputation evaluates long-term dependency modeling: the same interval is removed across all modalities.' },
+    sensor: { label: 'Missing sensors', icon: 'M2 3h10M2 7h10M2 11h10', desc: 'Sensor imputation measures cross-modality learning: one sensor is hidden for the whole window and MoCA reconstructs it from the other five. Use the switches to choose which sensor is missing.' },
+    extrapolation: { label: 'Forecasting', icon: 'M2 7h8M7 3l4 4-4 4', desc: 'Temporal extrapolation requires forecasting future values: the end of the window is removed across all modalities.' },
+  };
+  const st = { s: 0, task: 'random', v: 0 };
+  const runs = (m, c) => { const out = []; for (let p = 0; p < 10; p++) { const h = m[c * 10 + p] === '1', l = out[out.length - 1]; if (l && l.h === h) l.e = (p + 1) * 20; else out.push({ h, s: p * 20, e: (p + 1) * 20 }); } return out; };
+  function chart(x, pred, rs, y, h) {
+    let bg = '', fg = '';
+    for (const r of rs) {
+      if (r.h) {
+        bg += `<rect class="win" x="${X(r.s - .5)}" width="${X(r.e - .5) - X(r.s - .5)}" y="0" height="${h}"/>`;
+        if (r.s > 0) bg += `<line class="div" x1="${X(r.s - .5)}" x2="${X(r.s - .5)}" y1="0" y2="${h}" ${NS}/>`;
+        if (r.e < N) bg += `<line class="div" x1="${X(r.e - .5)}" x2="${X(r.e - .5)}" y1="0" y2="${h}" ${NS}/>`;
+        const tr = [], pr = [];
+        for (let t = Math.max(r.s - 1, 0); t <= Math.min(r.e, N - 1); t++) { tr.push([t, x[t]]); pr.push([t, t >= r.s && t < r.e ? pred[t] : x[t]]); }
+        fg += `<path class="truth" d="${line(tr, y)}" ${NS}/><path class="pred" d="${line(pr, y)}" ${NS}/>`;
+      } else {
+        const pts = []; for (let t = r.s; t < r.e; t++) pts.push([t, x[t]]);
+        fg = `<path class="obs" d="${line(pts, y)}" ${NS}/>` + fg;
+      }
+    }
+    return bg + fg;
+  }
+  D.samples.forEach((smp, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = smp.label; b.onclick = () => { st.s = i; st.v = st.task === 'sensor' ? F : 0; draw(); }; $('d-tabs').append(b); });
+  for (const [k, t] of Object.entries(TASKS)) {
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.task = k; b.setAttribute('aria-label', t.label);
+    b.innerHTML = `<span class="ic"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="${t.icon}" stroke="currentColor" stroke-width="2" fill="${k === 'random' ? 'currentColor' : 'none'}"/></svg></span><span class="lbl">${t.label}</span>`;
+    b.onclick = () => { st.task = k; st.v = k === 'sensor' ? F : 0; draw(); };
+    $('d-modes').append(b);
+  }
+  $('d-reroll').onclick = () => { st.v = (st.v + 1) % D.samples[st.s].tasks[st.task].length; draw(); };
+  $('d-focus').textContent = D.channels[F];
+  $('d-tog-main').setAttribute('aria-label', `Hide ${D.channels[F]}`);
+  $('d-tog-main').onclick = () => { st.v = F; draw(); };
+  COVS.forEach((c, i) => {
+    const row = document.createElement('div'); row.className = 'd-band d-row';
+    row.innerHTML = `<div><svg viewBox="0 0 1000 58" preserveAspectRatio="none" aria-hidden="true"></svg><span class="name">${D.channels[c]}<small>${c < 3 ? 'rad/s' : 'g'}</small></span></div>
+      <button class="tog" type="button" role="switch" aria-label="Hide ${D.channels[c]}"></button>`;
+    row.querySelector('.tog').onclick = () => { st.v = c; draw(); };
+    $('d-rows').append(row);
+  });
+  [0, 50, 100, 150].forEach(t => $('d-axis').insertAdjacentHTML('beforeend', `<span style="left:${t / (N - 1) * 100}%">${t / 50} s</span>`));
+  const ranges = D.samples.map(smp => smp.x.map((x, c) => {
+    const vals = [...x];
+    for (const o of Object.values(smp.tasks).flat()) for (let t = 0; t < N; t++) if (o.mask[c * 10 + Math.floor(t / 20)] === '1') vals.push(o.y[c][t]);
+    return [Math.min(...vals), Math.max(...vals)];
+  }));
+  function draw() {
+    const smp = D.samples[st.s], o = smp.tasks[st.task][st.v], m = o.mask;
+    const [lo, hi] = ranges[st.s][F], y = scale(lo, hi, 0, 260, 40);
+    $('d-svg').innerHTML = chart(smp.x[F], o.y[F], runs(m, F), y, 260) + `<line class="hair" id="d-hair" y1="0" y2="260" ${NS}/>`;
+    const step = hi - lo > 1.2 ? .5 : hi - lo > .5 ? .2 : .1;
+    let ticks = ''; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) ticks += `<span style="top:${y(v) / 2.6}%">${v.toFixed(1)}</span>`;
+    $('d-ylab').innerHTML = ticks;
+    [...$('d-rows').children].forEach((row, i) => {
+      const c = COVS[i], [l2, h2] = ranges[st.s][c];
+      row.querySelector('svg').innerHTML = chart(smp.x[c], o.y[c], runs(m, c), scale(l2, h2, 0, 58, 7), 58);
+      const sw = row.querySelector('.tog'); sw.hidden = st.task !== 'sensor'; sw.setAttribute('aria-checked', st.task === 'sensor' && st.v === c);
+    });
+    let se = 0, n = 0;
+    for (let c = 0; c < 6; c++) for (let t = 0; t < N; t++) if (m[c * 10 + Math.floor(t / 20)] === '1') { se += (o.y[c][t] - smp.x[c][t]) ** 2; n++; }
+    $('d-metric').innerHTML = `<b>MSE ${(se / n).toFixed(3)}</b> on hidden values`;
+    $('d-reroll').hidden = !(st.task === 'random' || st.task === 'temporal');
+    $('d-hint').textContent = st.task === 'sensor' ? '· switch on the sensor to hide' : '';
+    $('d-tog-main').hidden = st.task !== 'sensor'; $('d-tog-main').setAttribute('aria-checked', st.task === 'sensor' && st.v === F);
+    $('d-desc').textContent = TASKS[st.task].desc + ' Example UCI-HAR test windows reconstructed by the released pre-trained MoCA checkpoint.';
+    press([...$('d-tabs').children], $('d-tabs').children[st.s]);
+    press([...$('d-modes').children], [...$('d-modes').children].find(b => b.dataset.task === st.task));
+  }
+  $('d-svg').addEventListener('pointermove', ev => {
+    const r = ev.currentTarget.getBoundingClientRect(), t = Math.round((ev.clientX - r.left) / r.width * (N - 1));
+    if (t < 0 || t >= N) return;
+    const smp = D.samples[st.s], o = smp.tasks[st.task][st.v], hid = o.mask[F * 10 + Math.floor(t / 20)] === '1';
+    const h = $('d-hair'); h.setAttribute('x1', X(t)); h.setAttribute('x2', X(t)); h.style.opacity = 1;
+    $('d-tip').innerHTML = `${(t / 50).toFixed(2)} s<br>${hid ? 'Truth' : 'Observed'} ${smp.x[F][t].toFixed(3)}` + (hid ? `<br>MoCA ${o.y[F][t].toFixed(3)}` : '');
+    const left = ev.clientX - r.left; $('d-tip').style.left = (left > r.width - 160 ? left - 150 : left + 12) + 'px'; $('d-tip').style.opacity = 1;
+  });
+  $('d-svg').addEventListener('pointerleave', () => { $('d-hair').style.opacity = 0; $('d-tip').style.opacity = 0; });
+  draw();
+})();
+
+/* ---------- How it works: stage 1 trains the encoder, stage 2 reuses it ---------- */
+(() => {
+  const H = D.how, C = D.cls, m = [...H.mask].map(Number);
+  const CH = [
+    { k: 'Stage 1 · Mask', d: 4000, cap: 'Pre-training uses unlabeled windows. Most patches are hidden, independently for each sensor.' },
+    { k: 'Stage 1 · Reconstruct', d: 5200, cap: 'The encoder reads only the visible patches and the decoder rebuilds the whole window. The reconstruction error trains the encoder; no labels are needed.' },
+    { k: 'Hand-off', d: 3400, cap: 'After pre-training the decoder is discarded. The trained encoder is the part we keep.' },
+    { k: 'Stage 2 · Classify', d: 5600, cap: 'Labeled windows go through the pre-trained encoder without masking. A classification head maps its representation to the activity; in linear probing only this head is trained.' },
+  ];
+  const START = CH.map((_, j) => CH.slice(0, j).reduce((a, c) => a + c.d, 0)), TOTAL = START[3] + CH[3].d;
+
+  // masked patches appear in a fixed scattered order
+  const hidden = m.map((v, i) => v ? i : -1).filter(i => i >= 0).sort((a, b) => (a * 37) % 61 - (b * 37) % 61);
+  const order = Object.fromEntries(hidden.map((i, k) => [i, k / hidden.length]));
+  function thumb(svg, recon, clip) {
+    let s = clip ? `<defs><clipPath id="${svg.id}-c"><rect x="0" y="0" width="0" height="120"/></clipPath></defs><g clip-path="url(#${svg.id}-c)">` : '<g>';
+    H.x.forEach((x, c) => {
+      const vals = x.concat(H.y[c].filter((_, t) => m[c * 10 + Math.floor(t / 20)]));
+      const y = scale(Math.min(...vals), Math.max(...vals), c * 20, 20, 2.5);
+      if (c) s += `<line x1="0" x2="1000" y1="${c * 20}" y2="${c * 20}" stroke="#edf3f3" ${NS}/>`;
+      for (let p = 0; p < 10; p++) {
+        const i = c * 10 + p, a = Math.max(p * 20 - 1, 0), b = Math.min(p * 20 + 20, N - 1), tr = [], rc = [];
+        for (let t = a; t <= b; t++) { tr.push([t, x[t]]); rc.push([t, t >= p * 20 && t < p * 20 + 20 ? H.y[c][t] : x[t]]); }
+        s += `<g class="pg${m[i] ? ' m' : ''}" data-i="${i}"><rect x="${X(p * 20 - .5)}" y="${c * 20 + 1}" width="${X(p * 20 + 19.5) - X(p * 20 - .5)}" height="18"/>`
+          + `<path class="tr" d="${line(tr, y)}" ${NS}/>${recon && m[i] ? `<path class="rc" d="${line(rc, y)}" ${NS}/>` : ''}</g>`;
+      }
+    });
+    svg.innerHTML = s + '</g>';
+    return [...svg.querySelectorAll('.pg')];
+  }
+  const in1 = thumb($('sb-in1')), out1 = thumb($('sb-out1'), true), clip2 = (thumb($('sb-in2'), false, true), $('sb-in2').querySelector('clipPath rect'));
+  $('sb-rep').innerHTML = H.z.map(v => `<i style="background:${v >= 0 ? `rgba(15,124,134,${.25 + .75 * v})` : `rgba(201,118,28,${.25 - .75 * v})`}"></i>`).join('');
+  const reps = [...$('sb-rep').children];
+
+  const r1 = $('sb-r1'), r2 = $('sb-r2'), enc1 = $('sb-enc1'), enc2 = $('sb-enc2'), dec = $('sb-dec'), head = $('sb-head'), ghost = $('sb-ghost');
+  const fill = enc1.querySelector('.fill'), steps = [...$('how-steps').children];
+  CH.forEach((c, j) => $('vid-segs').insertAdjacentHTML('beforeend', `<button type="button" class="${j === 3 ? 's2' : ''}"><i><b></b></i><span>${c.k}</span></button>`));
+  const segs = [...$('vid-segs').children];
+  const sub = (el, txt) => { const sp = el.querySelector('span'); if (sp.textContent !== txt) sp.textContent = txt; };
+  const ease = x => x < .5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2;
+  let lastOut = null;
+
+  function apply(k, f) {
+    const s2 = k === 3 || (k === 2 && f >= .5);
+    r1.classList.toggle('dim', s2); r2.classList.toggle('dim', !s2);
+    // stage 1: mask, encode, decode, learn
+    in1.forEach(g => { const o = order[g.dataset.i]; g.classList.toggle('on', o != null && (k > 0 || o < f * 1.4)); });
+    enc1.classList.toggle('on', (k === 0 && f > .6) || k === 1);
+    sub(enc1, k === 0 ? (f > .6 ? 'reads the visible patches' : 'ViT-Base') : k === 1 && f < .85 ? 'learning from the error…' : 'trained ✓');
+    fill.style.width = (k === 0 ? 0 : k === 1 ? Math.min(1, f / .85) * 100 : 100) + '%';
+    const gone = k === 3 || (k === 2 && f >= .15);
+    dec.classList.toggle('on', k === 1); dec.classList.toggle('drop', gone);
+    sub(dec, k === 1 ? 'rebuilds every patch' : gone ? 'discarded' : '8 layers');
+    $('sb-out1').classList.toggle('wait', k === 0);
+    out1.forEach(g => { const o = order[g.dataset.i]; g.classList.toggle('rec', o != null && (k > 1 || (k === 1 && o < f * 1.3))); });
+    $('sb-loss').classList.toggle('on', k === 1 && f > .3);
+    // hand-off: the trained encoder moves down into stage 2
+    const arrived = k === 3 || (k === 2 && f >= .8);
+    if (k === 2 && f > .15 && f < .8) {
+      const R = $('sb').getBoundingClientRect(), a = enc1.getBoundingClientRect(), b = enc2.getBoundingClientRect(), e = ease((f - .15) / .65);
+      Object.assign(ghost.style, { width: a.width + 'px', height: a.height + 'px', opacity: 1,
+        transform: `translate(${a.left - R.left + (b.left - a.left) * e}px, ${a.top - R.top + (b.top - a.top) * e}px)` });
+    } else ghost.style.opacity = 0;
+    enc2.classList.toggle('empty', !arrived); enc2.classList.toggle('on', k === 3);
+    sub(enc2, arrived ? '❄️ pre-trained, frozen' : 'from Stage 1');
+    // stage 2: full window -> encoder -> representation -> head -> activity
+    clip2.setAttribute('width', k === 3 ? Math.min(1, f / .3) * 1000 : 0);
+    reps.forEach((el, j) => el.classList.toggle('on', k === 3 && f > .3 + j / reps.length * .25));
+    const headOn = k === 3 && f > .6;
+    head.classList.toggle('on', headOn); sub(head, headOn ? '🔥 trained with labels' : 'trained with labels');
+    const out = k === 3 && f > .75 ? `${C.names[H.label]}<small>predicted activity</small>` : '';
+    if (out !== lastOut) { $('sb-out').innerHTML = out; lastOut = out; }
+    steps[0].classList.toggle('on', k < 2); steps[1].classList.toggle('on', k === 3);
+    segs.forEach((b, j) => { b.querySelector('b').style.width = (j < k ? 100 : j === k ? f * 100 : 0) + '%'; b.classList.toggle('cur', j === k); });
+  }
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let t = reduce ? TOTAL - 1 : 0, last = null, playing = !reduce, visible = false, cur = -1;
+  function frame(now) {
+    if (last != null && playing && visible) t += now - last;
+    last = now;
+    const tt = t % TOTAL, k = START.filter(s => s <= tt).length - 1, f = (tt - START[k]) / CH[k].d;
+    if (k !== cur) { cur = k; $('vid-k').textContent = CH[k].k + '.'; $('vid-cap').textContent = CH[k].cap; }
+    apply(k, f);
+    requestAnimationFrame(frame);
+  }
+  const jump = j => { t = START[j] + (playing ? 0 : CH[j].d - 1); };
+  segs.forEach((b, j) => b.onclick = () => jump(j));
+  steps.forEach((li, j) => li.onclick = () => jump(j ? 3 : 0));
+  $('vid-play').onclick = () => {
+    playing = !playing;
+    $('vid-play').textContent = playing ? '❚❚' : '▶';
+    $('vid-play').setAttribute('aria-label', playing ? 'Pause' : 'Play');
+  };
+  if (!playing) { $('vid-play').textContent = '▶'; $('vid-play').setAttribute('aria-label', 'Play'); }
+  new IntersectionObserver(e => { visible = e[0].isIntersecting; }, { threshold: .25 }).observe($('vid'));
+  requestAnimationFrame(frame);
+})();
+
+// copy BibTeX
+$('copy-bib').onclick = async () => {
+  try { await navigator.clipboard.writeText($('bibtex').textContent); $('copy-status').textContent = 'Copied'; }
+  catch { $('copy-status').textContent = 'Select and copy'; }
+};
+
+// fade sections in as they scroll into view
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
